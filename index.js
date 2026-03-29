@@ -15,7 +15,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     const embed = new EmbedBuilder()
-      .setTitle('📋 Member Log')
+      .setTitle('Recently Joined Members')
       .setDescription('No content yet.')
       .setColor(0x5865F2);
 
@@ -58,7 +58,7 @@ client.on('interactionCreate', async interaction => {
     const content = interaction.fields.getTextInputValue('log_content');
 
     const updatedEmbed = new EmbedBuilder()
-      .setTitle('📋 Member Log')
+      .setTitle('Recently Joined Members')
       .setDescription(content)
       .setColor(0x5865F2)
       .setFooter({ text: `Last edited by ${interaction.user.username}` });
