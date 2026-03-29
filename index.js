@@ -2,8 +2,6 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-const ALLOWED_ROLE_ID = '1481661793653751901';
-
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
@@ -29,9 +27,9 @@ client.on('interactionCreate', async interaction => {
 
   // Button click
   if (interaction.isButton() && interaction.customId === 'edit_member_log') {
-    if (!interaction.member.roles.cache.has(ALLOWED_ROLE_ID)) {
-      return interaction.reply({ content: '❌ You do not have permission.', ephemeral: true });
-    }
+if (!interaction.member.permissions.has('Administrator')) {
+  return interaction.reply({ content: '❌ You need Administrator permission to edit this.', ephemeral: true });
+}
 
     const modal = new ModalBuilder()
       .setCustomId('member_log_modal')
