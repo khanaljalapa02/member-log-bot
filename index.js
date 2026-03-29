@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-const ALLOWED_ROLE_ID = 'YOUR_ROLE_ID_HERE';
+const ALLOWED_ROLE_ID = '1481661793653751901';
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
