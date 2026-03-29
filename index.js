@@ -10,6 +10,10 @@ client.on('interactionCreate', async interaction => {
 
   // Slash command
   if (interaction.isChatInputCommand() && interaction.commandName === 'member-log') {
+    if (!interaction.memberPermissions.has('Administrator')) {
+      return interaction.reply({ content: '❌ You need Administrator permission to use this command.', ephemeral: true });
+    }
+
     const embed = new EmbedBuilder()
       .setTitle('📋 Member Log')
       .setDescription('No content yet.')
@@ -27,9 +31,9 @@ client.on('interactionCreate', async interaction => {
 
   // Button click
   if (interaction.isButton() && interaction.customId === 'edit_member_log') {
-if (!interaction.member.permissions.has('Administrator')) {
-  return interaction.reply({ content: '❌ You need Administrator permission to edit this.', ephemeral: true });
-}
+    if (!interaction.memberPermissions.has('Administrator')) {
+      return interaction.reply({ content: '❌ You need Administrator permission to edit this.', ephemeral: true });
+    }
 
     const modal = new ModalBuilder()
       .setCustomId('member_log_modal')
@@ -37,13 +41,13 @@ if (!interaction.member.permissions.has('Administrator')) {
 
     const currentText = interaction.message.embeds[0]?.description || '';
 
-const input = new TextInputBuilder()
-  .setCustomId('log_content')
-  .setLabel('Log Content')
-  .setStyle(TextInputStyle.Paragraph)
-  .setPlaceholder('Enter member log details here...')
-  .setValue(currentText)
-  .setRequired(true);
+    const input = new TextInputBuilder()
+      .setCustomId('log_content')
+      .setLabel('Log Content')
+      .setStyle(TextInputStyle.Paragraph)
+      .setPlaceholder('Enter member log details here...')
+      .setValue(currentText)
+      .setRequired(true);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
     await interaction.showModal(modal);
