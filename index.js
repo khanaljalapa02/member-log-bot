@@ -37,12 +37,15 @@ client.on('interactionCreate', async interaction => {
       .setCustomId('member_log_modal')
       .setTitle('Edit Member Log');
 
-    const input = new TextInputBuilder()
-      .setCustomId('log_content')
-      .setLabel('Log Content')
-      .setStyle(TextInputStyle.Paragraph)
-      .setPlaceholder('Enter member log details here...')
-      .setRequired(true);
+    const currentText = interaction.message.embeds[0]?.description || '';
+
+const input = new TextInputBuilder()
+  .setCustomId('log_content')
+  .setLabel('Log Content')
+  .setStyle(TextInputStyle.Paragraph)
+  .setPlaceholder('Enter member log details here...')
+  .setValue(currentText)
+  .setRequired(true);
 
     modal.addComponents(new ActionRowBuilder().addComponents(input));
     await interaction.showModal(modal);
