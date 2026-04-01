@@ -2,7 +2,6 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
-// Store sticky messages by messageId: { channelId, title, content }
 const stickyMessages = {};
 
 client.on('ready', () => {
@@ -52,7 +51,6 @@ client.on('interactionCreate', async interaction => {
 
     const sent = await interaction.reply({ embeds: [embed], components: [row], fetchReply: true });
 
-    // Track by messageId instead of channelId
     stickyMessages[sent.id] = {
       channelId: interaction.channelId,
       title: '📌 Sticky Log',
@@ -66,13 +64,23 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: '❌ You need Administrator permission to edit this.', ephemeral: true });
     }
 
-    const modal = new ModalBuilder()
-      .setCustomId('member_log_modal')
-      .setTitle('Edit Member Log');
-
+    const messageId = interaction.message.id;
+    const currentTitle = interaction.message.embeds[0]?.title || 'Recently Joined Members';
     const currentText = interaction.message.embeds[0]?.description || '';
 
-    const input = new TextInputBuilder()
+    const modal = new ModalBuilder()
+      .setCustomId(`member_log_modal:${messageId}`)
+      .setTitle('Edit Member Log');
+
+    const titleInput = new TextInputBuilder()
+      .setCustomId('member_log_title')
+      .setLabel('Title')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('Enter title here...')
+      .setValue(currentTitle)
+      .setRequired(true);
+
+    const contentInput = new TextInputBuilder()
       .setCustomId('log_content')
       .setLabel('Log Content')
       .setStyle(TextInputStyle.Paragraph)
@@ -80,7 +88,11 @@ client.on('interactionCreate', async interaction => {
       .setValue(currentText)
       .setRequired(true);
 
-    modal.addComponents(new ActionRowBuilder().addComponents(input));
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(titleInput),
+      new ActionRowBuilder().addComponents(contentInput)
+    );
+
     await interaction.showModal(modal);
   }
 
@@ -123,11 +135,12 @@ client.on('interactionCreate', async interaction => {
   }
 
   // Modal: member_log_modal
-  if (interaction.isModalSubmit() && interaction.customId === 'member_log_modal') {
+  if (interaction.isModalSubmit() && interaction.customId.startsWith('member_log_modal:')) {
+    const title = interaction.fields.getTextInputValue('member_log_title');
     const content = interaction.fields.getTextInputValue('log_content');
 
     const updatedEmbed = new EmbedBuilder()
-      .setTitle('Recently Joined Members')
+      .setTitle(title)
       .setDescription(content)
       .setColor(0x5865F2)
       .setFooter({ text: `Last edited by ${interaction.user.username}` });
@@ -149,7 +162,6 @@ client.on('interactionCreate', async interaction => {
     const content = interaction.fields.getTextInputValue('sticky_log_content');
     const channelId = interaction.channelId;
 
-    // Delete old sticky message
     if (stickyMessages[originalMessageId]) {
       try {
         const oldMsg = await interaction.channel.messages.fetch(originalMessageId);
@@ -175,7 +187,6 @@ client.on('interactionCreate', async interaction => {
 
     const newMsg = await interaction.channel.send({ embeds: [updatedEmbed], components: [row] });
 
-    // Track new message by its new messageId
     stickyMessages[newMsg.id] = {
       channelId,
       title,
@@ -191,7 +202,6 @@ client.on('messageCreate', async message => {
 
   const channelId = message.channelId;
 
-  // Find all sticky messages in this channel
   const channelStickies = Object.entries(stickyMessages).filter(
     ([, data]) => data.channelId === channelId
   );
@@ -199,7 +209,6 @@ client.on('messageCreate', async message => {
   if (channelStickies.length === 0) return;
 
   for (const [msgId, sticky] of channelStickies) {
-    // Skip if the last message is already this sticky
     if (msgId === message.channel.lastMessageId) continue;
 
     try {
