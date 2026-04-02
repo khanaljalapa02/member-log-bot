@@ -1,8 +1,34 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+ges[msgId];
+    stickyMessages[newMsg.id] = {
+      channelId,
+      title: sticky.title,
+      content: sticky.content
+    };
+  }
+});
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+client.login(process.env.TOKEN);const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const fs = require('fs');
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
 const stickyMessages = {};
+
+// Load/save mediaonly rules
+function loadMediaOnly() {
+  try {
+    if (!fs.existsSync('mediaonly.json')) return {};
+    return JSON.parse(fs.readFileSync('mediaonly.json', 'utf8'));
+  } catch { return {}; }
+}
+
+function saveMediaOnly(data) {
+  try {
+    fs.writeFileSync('mediaonly.json', JSON.stringify(data, null, 2));
+  } catch (err) { console.error('Save error:', err); }
+}
+
+let mediaOnlyRules = loadMediaOnly();
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}`);
@@ -56,6 +82,65 @@ client.on('interactionCreate', async interaction => {
       title: '📌 Sticky Log',
       content: 'No content yet.'
     };
+  }
+
+  // /mediaonly command
+  if (interaction.isChatInputCommand() && interaction.commandName === 'mediaonly') {
+    if (!interaction.memberPermissions.has('Administrator')) {
+      return interaction.reply({ content: '❌ You need Administrator permission.', ephemeral: true });
+    }
+
+    const sub = interaction.options.getSubcommand();
+
+    if (sub === 'add') {
+      const channel = interaction.options.getChannel('channel');
+      const thread = interaction.options.getString('thread');
+      const key = thread ? `${channel.id}-${thread}` : channel.id;
+
+      if (!mediaOnlyRules[interaction.guildId]) mediaOnlyRules[interaction.guildId] = {};
+      mediaOnlyRules[interaction.guildId][key] = {
+        channelId: channel.id,
+        threadId: thread || null,
+        channelName: channel.name
+      };
+      saveMediaOnly(mediaOnlyRules);
+
+      await interaction.reply({ 
+        content: `✅ Media-only rule added for ${channel}${thread ? ` thread \`${thread}\`` : ''}`, 
+        ephemeral: true 
+      });
+    }
+
+    if (sub === 'remove') {
+      const channel = interaction.options.getChannel('channel');
+      const thread = interaction.options.getString('thread');
+      const key = thread ? `${channel.id}-${thread}` : channel.id;
+
+      if (!mediaOnlyRules[interaction.guildId] || !mediaOnlyRules[interaction.guildId][key]) {
+        return interaction.reply({ content: `❌ No rule found for that channel/thread.`, ephemeral: true });
+      }
+
+      delete mediaOnlyRules[interaction.guildId][key];
+      saveMediaOnly(mediaOnlyRules);
+
+      await interaction.reply({ 
+        content: `✅ Media-only rule removed for ${channel}${thread ? ` thread \`${thread}\`` : ''}`, 
+        ephemeral: true 
+      });
+    }
+
+    if (sub === 'list') {
+      const rules = mediaOnlyRules[interaction.guildId];
+      if (!rules || Object.keys(rules).length === 0) {
+        return interaction.reply({ content: '❌ No media-only rules set up yet.', ephemeral: true });
+      }
+
+      const list = Object.values(rules)
+        .map(r => `• <#${r.channelId}>${r.threadId ? ` thread \`${r.threadId}\`` : ''}`)
+        .join('\n');
+
+      await interaction.reply({ content: `📋 **Media-Only Rules:**\n${list}`, ephemeral: true });
+    }
   }
 
   // Button: edit_member_log
@@ -193,15 +278,49 @@ client.on('interactionCreate', async interaction => {
       content
     };
   }
-
 });
 
-// Sticky behavior: move to bottom on new message
+// Message handler
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
 
+  const guildId = message.guildId;
   const channelId = message.channelId;
+  const parentId = message.channel.parentId;
 
+  // Media only check
+  const rules = mediaOnlyRules[guildId];
+  if (rules) {
+    const ruleKey = rules[channelId] ? channelId :
+                    rules[`${parentId}-${channelId}`] ? `${parentId}-${channelId}` :
+                    rules[parentId] ? parentId : null;
+
+    if (ruleKey) {
+      const member = message.member;
+      const isExempt = member.permissions.has('Administrator') ||
+                       member.permissions.has('ManageMessages') ||
+                       member.permissions.has('ManageChannels');
+
+      if (!isExempt) {
+        const hasImage = message.attachments.some(a =>
+          a.contentType && a.contentType.startsWith('image/')
+        );
+
+        if (!hasImage) {
+          setTimeout(async () => {
+            try {
+              await message.delete();
+            } catch (err) {
+              console.error('Delete error:', err);
+            }
+          }, 1000);
+          return;
+        }
+      }
+    }
+  }
+
+  // Sticky behavior
   const channelStickies = Object.entries(stickyMessages).filter(
     ([, data]) => data.channelId === channelId
   );
