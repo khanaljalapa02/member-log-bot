@@ -72,7 +72,8 @@ client.on('interactionCreate', async interaction => {
       channelId: interaction.channelId,
       title: '📌 Sticky Log',
       content: 'No content yet.',
-      imageUrl: null
+      imageUrl: null,
+      footer: null
     };
   }
 
@@ -183,6 +184,7 @@ client.on('interactionCreate', async interaction => {
     const currentTitle = interaction.message.embeds[0]?.title || '📌 Sticky Log';
     const currentText = interaction.message.embeds[0]?.description || '';
     const currentImage = interaction.message.embeds[0]?.image?.url || '';
+    const currentFooter = interaction.message.embeds[0]?.footer?.text || '';
 
     const modal = new ModalBuilder()
       .setCustomId(`sticky_log_modal:${messageId}`)
@@ -212,10 +214,19 @@ client.on('interactionCreate', async interaction => {
       .setValue(currentImage)
       .setRequired(false);
 
+    const footerInput = new TextInputBuilder()
+      .setCustomId('sticky_log_footer')
+      .setLabel('Footer (optional)')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('Enter footer text here...')
+      .setValue(currentFooter)
+      .setRequired(false);
+
     modal.addComponents(
       new ActionRowBuilder().addComponents(titleInput),
       new ActionRowBuilder().addComponents(contentInput),
-      new ActionRowBuilder().addComponents(imageInput)
+      new ActionRowBuilder().addComponents(imageInput),
+      new ActionRowBuilder().addComponents(footerInput)
     );
 
     await interaction.showModal(modal);
@@ -248,6 +259,7 @@ client.on('interactionCreate', async interaction => {
     const title = interaction.fields.getTextInputValue('sticky_log_title');
     const content = interaction.fields.getTextInputValue('sticky_log_content');
     const imageUrl = interaction.fields.getTextInputValue('sticky_log_image').trim();
+    const footer = interaction.fields.getTextInputValue('sticky_log_footer').trim();
     const channelId = interaction.channelId;
 
     if (stickyMessages[originalMessageId]) {
@@ -263,10 +275,10 @@ client.on('interactionCreate', async interaction => {
     const updatedEmbed = new EmbedBuilder()
       .setTitle(title)
       .setDescription(content)
-      .setColor(0xED4245)
-      .setFooter({ text: `Last edited by ${interaction.user.username}` });
+      .setColor(0xED4245);
 
     if (imageUrl) updatedEmbed.setImage(imageUrl);
+    if (footer) updatedEmbed.setFooter({ text: footer });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -281,7 +293,8 @@ client.on('interactionCreate', async interaction => {
       channelId,
       title,
       content,
-      imageUrl: imageUrl || null
+      imageUrl: imageUrl || null,
+      footer: footer || null
     };
   }
 });
@@ -350,6 +363,7 @@ client.on('messageCreate', async message => {
       .setColor(0xED4245);
 
     if (sticky.imageUrl) embed.setImage(sticky.imageUrl);
+    if (sticky.footer) embed.setFooter({ text: sticky.footer });
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -365,7 +379,8 @@ client.on('messageCreate', async message => {
       channelId,
       title: sticky.title,
       content: sticky.content,
-      imageUrl: sticky.imageUrl
+      imageUrl: sticky.imageUrl,
+      footer: sticky.footer
     };
   }
 });
