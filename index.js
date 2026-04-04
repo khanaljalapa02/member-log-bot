@@ -71,7 +71,8 @@ client.on('interactionCreate', async interaction => {
     stickyMessages[sent.id] = {
       channelId: interaction.channelId,
       title: '📌 Sticky Log',
-      content: 'No content yet.'
+      content: 'No content yet.',
+      imageUrl: null
     };
   }
 
@@ -181,6 +182,7 @@ client.on('interactionCreate', async interaction => {
     const messageId = interaction.message.id;
     const currentTitle = interaction.message.embeds[0]?.title || '📌 Sticky Log';
     const currentText = interaction.message.embeds[0]?.description || '';
+    const currentImage = interaction.message.embeds[0]?.image?.url || '';
 
     const modal = new ModalBuilder()
       .setCustomId(`sticky_log_modal:${messageId}`)
@@ -202,9 +204,18 @@ client.on('interactionCreate', async interaction => {
       .setValue(currentText)
       .setRequired(true);
 
+    const imageInput = new TextInputBuilder()
+      .setCustomId('sticky_log_image')
+      .setLabel('Image URL (optional)')
+      .setStyle(TextInputStyle.Short)
+      .setPlaceholder('https://example.com/image.png')
+      .setValue(currentImage)
+      .setRequired(false);
+
     modal.addComponents(
       new ActionRowBuilder().addComponents(titleInput),
-      new ActionRowBuilder().addComponents(contentInput)
+      new ActionRowBuilder().addComponents(contentInput),
+      new ActionRowBuilder().addComponents(imageInput)
     );
 
     await interaction.showModal(modal);
@@ -236,6 +247,7 @@ client.on('interactionCreate', async interaction => {
     const originalMessageId = interaction.customId.split(':')[1];
     const title = interaction.fields.getTextInputValue('sticky_log_title');
     const content = interaction.fields.getTextInputValue('sticky_log_content');
+    const imageUrl = interaction.fields.getTextInputValue('sticky_log_image').trim();
     const channelId = interaction.channelId;
 
     if (stickyMessages[originalMessageId]) {
@@ -254,6 +266,8 @@ client.on('interactionCreate', async interaction => {
       .setColor(0xED4245)
       .setFooter({ text: `Last edited by ${interaction.user.username}` });
 
+    if (imageUrl) updatedEmbed.setImage(imageUrl);
+
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('edit_sticky_log')
@@ -266,7 +280,8 @@ client.on('interactionCreate', async interaction => {
     stickyMessages[newMsg.id] = {
       channelId,
       title,
-      content
+      content,
+      imageUrl: imageUrl || null
     };
   }
 });
@@ -334,6 +349,8 @@ client.on('messageCreate', async message => {
       .setDescription(sticky.content)
       .setColor(0xED4245);
 
+    if (sticky.imageUrl) embed.setImage(sticky.imageUrl);
+
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('edit_sticky_log')
@@ -347,7 +364,8 @@ client.on('messageCreate', async message => {
     stickyMessages[newMsg.id] = {
       channelId,
       title: sticky.title,
-      content: sticky.content
+      content: sticky.content,
+      imageUrl: sticky.imageUrl
     };
   }
 });
