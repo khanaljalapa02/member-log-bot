@@ -326,13 +326,18 @@ client.on('messageCreate', async message => {
         );
 
         if (!hasImage) {
-          setTimeout(async () => {
+          const tryDelete = async (attempts) => {
             try {
               await message.delete();
             } catch (err) {
-              console.error('Delete error:', err);
+              if (attempts > 0) {
+                setTimeout(() => tryDelete(attempts - 1), 1000);
+              } else {
+                console.error('Delete error:', err);
+              }
             }
-          }, 1000);
+          };
+          setTimeout(() => tryDelete(3), 1000);
           return;
         }
       }
