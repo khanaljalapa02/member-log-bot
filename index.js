@@ -310,8 +310,9 @@ client.on('messageCreate', async message => {
   // Media only check
   const rules = mediaOnlyRules[guildId];
   if (rules) {
+    const threadKey = parentId ? `${parentId}-${channelId}` : null;
     const ruleKey = rules[channelId] ? channelId :
-                    rules[`${parentId}-${channelId}`] ? `${parentId}-${channelId}` :
+                    (threadKey && rules[threadKey]) ? threadKey :
                     rules[parentId] ? parentId : null;
 
     if (ruleKey) {
@@ -390,4 +391,4 @@ client.on('messageCreate', async message => {
   }
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN)
